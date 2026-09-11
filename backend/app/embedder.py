@@ -6,13 +6,20 @@ cada uno describiendo una región pequeña. Ver design.md, sección
 """
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import torch
 from PIL import Image
 from transformers import AutoImageProcessor, AutoModel
 
-MODEL_ID = "facebook/dinov2-small"
-IMAGE_SIZE = 518  # múltiplo de 14 (tamaño de parche de DINOv2)
+from .imaging import fit_square
+
+# Se puede cambiar por variable de entorno sin tocar el código:
+#   EDGEQA_MODEL=facebook/dinov2-base   (768 dims, ~4x el cómputo)
+#   EDGEQA_MODEL=facebook/dinov2-large  (1024 dims, ~12x)
+MODEL_ID = os.environ.get("EDGEQA_MODEL", "facebook/dinov2-small")
+IMAGE_SIZE = int(os.environ.get("EDGEQA_SIZE", "518"))  # múltiplo de 14
 
 
 def _pick_device() -> str:
@@ -28,6 +35,7 @@ class PatchEmbedder:
 
     def __init__(self, image_size: int = IMAGE_SIZE) -> None:
         self.device = _pick_device()
+        self.model_id = MODEL_ID
         self.image_size = image_size
         self.processor = AutoImageProcessor.from_pretrained(
             MODEL_ID,
@@ -40,8 +48,13 @@ class PatchEmbedder:
 
     @torch.inference_mode()
     def embed(self, image: Image.Image) -> np.ndarray:
-        """Devuelve los parches de una imagen como (n_parches, dims), normalizados L2."""
-        inputs = self.processor(images=image.convert("RGB"), return_tensors="pt")
+        """Devuelve los parches de una imagen como (n_parches, dims), normalizados L2.
+
+        La imagen se lleva al cuadrado de entrada preservando su proporción:
+        ver `fit_square`, en imaging.py.
+        """
+        squared = fit_square(image.convert("RGB"), self.image_size)
+        inputs = self.processor(images=squared, return_tensors="pt")
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         out = self.model(**inputs).last_hidden_state  # (1, 1 + n_parches, dims)
 

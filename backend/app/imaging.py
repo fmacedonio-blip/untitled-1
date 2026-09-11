@@ -17,24 +17,47 @@ def decode_data_url(data_url: str) -> Image.Image:
     return Image.open(io.BytesIO(raw)).convert("RGB")
 
 
-def crop_roi(image: Image.Image, roi: dict | None) -> Image.Image:
-    """Recorta la región de interés.
+def crop_rect(image: Image.Image, rect: dict | None) -> Image.Image:
+    """Recorta el rectángulo de una zona de inspección.
 
-    El ROI llega en coordenadas relativas (0..1) para no depender de la
+    El rectángulo llega en coordenadas relativas (0..1) para no depender de la
     resolución con la que el navegador entregó el cuadro.
     """
-    if not roi:
+    if not rect:
         return image
 
     w, h = image.size
-    left = int(max(0.0, min(1.0, roi["x"])) * w)
-    top = int(max(0.0, min(1.0, roi["y"])) * h)
-    right = int(max(0.0, min(1.0, roi["x"] + roi["w"])) * w)
-    bottom = int(max(0.0, min(1.0, roi["y"] + roi["h"])) * h)
+    left = int(max(0.0, min(1.0, rect["x"])) * w)
+    top = int(max(0.0, min(1.0, rect["y"])) * h)
+    right = int(max(0.0, min(1.0, rect["x"] + rect["w"])) * w)
+    bottom = int(max(0.0, min(1.0, rect["y"] + rect["h"])) * h)
 
     if right - left < 10 or bottom - top < 10:
         return image
     return image.crop((left, top, right, bottom))
+
+
+def fit_square(image: Image.Image, size: int) -> Image.Image:
+    """Escala preservando la relación de aspecto y rellena hasta un cuadrado.
+
+    Forzar un recorte alargado —una franja de texto, por ejemplo— al cuadrado
+    que espera el modelo lo estira de forma desigual, y ese estiramiento cambia
+    con cada milímetro que se mueve la pieza. La deformación resultante genera
+    más varianza entre capturas que el propio defecto que se busca detectar.
+
+    Escalando con la proporción intacta, una franja de texto se ve como texto
+    en todas las capturas y el defecto vuelve a ser la señal dominante.
+    """
+    w, h = image.size
+    scale = min(size / w, size / h)
+    new = (max(1, round(w * scale)), max(1, round(h * scale)))
+    resized = image.resize(new, Image.LANCZOS)
+
+    # El relleno es gris medio: neutro, sin bordes duros que el modelo
+    # pudiera interpretar como estructura de la pieza.
+    canvas = Image.new("RGB", (size, size), (127, 127, 127))
+    canvas.paste(resized, ((size - new[0]) // 2, (size - new[1]) // 2))
+    return canvas
 
 
 def _colorize(norm: np.ndarray) -> np.ndarray:

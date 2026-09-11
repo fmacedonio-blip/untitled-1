@@ -197,3 +197,90 @@ construir el banco.
 
 El banco se persiste a disco tras cada enrolamiento. Reiniciar el backend
 durante la demo no debe costar una recalibración.
+
+## Decisión: zonas de inspección múltiples
+
+El gate mostró que los defectos tipográficos no se separan (ver
+`resultados-gate.md`): miden entre 0.094 y 0.131, dentro del rango de las
+piezas correctas. El más sutil puntúa por debajo de cualquier pieza sana
+medida.
+
+La causa es geométrica, no de capacidad del modelo. Con un ROI que abarca
+la pieza entera, unos 650px reales se redimensionan a 518 y cada parche
+cubre ~17px. El trazo agregado a una letra ocupa menos de un parche, y ahí
+se promedia con la tipografía negra que ya estaba en esa región. Un modelo
+mayor recibiría el mismo parche ya degradado: la información se pierde en
+el resampleo, antes de la inferencia.
+
+Sustituimos entonces el ROI único por una lista de **zonas**, cada una con
+su propio rectángulo, su banco y su umbral:
+
+```
+                         ┌──────────────────┐
+   una captura ──┬──────▶│ zona "pieza"     │─┐
+                 ├──────▶│ zona "logo"      │─┤
+                 ├──────▶│ zona "sabor"     │─┼─▶ RECHAZADO si
+                 └──────▶│ zona "texto"     │─┘   alguna supera
+                         └──────────────────┘     su propio umbral
+```
+
+Cada zona se recorta de la misma captura y se escala a 518px por separado.
+Una zona de 160px de ancho pasa a tener parches de ~4px reales: cuatro
+veces la resolución efectiva sobre lo que importa.
+
+**Por qué no basta con subir la resolución global.** Llevar la pieza
+entera a 1036px cuadruplicaría el costo sobre toda la superficie para
+ganar detalle en las regiones que no lo necesitan, y DINOv2 degrada al
+interpolar los embeddings posicionales muy lejos de su tamaño de
+entrenamiento. Recortar primero y escalar después concentra el presupuesto
+de píxeles donde hace falta.
+
+**Por qué un umbral por zona y no uno global.** El score es el promedio
+del top-k de las distancias. Con una sola zona, un defecto diminuto
+compite contra la varianza de los 1369 parches de toda la pieza,
+incluida la del plástico que se arruga distinto en cada colocación.
+Calibrando cada zona por separado, el logo se compara solo contra logos y
+su tolerancia no queda contaminada por el resto.
+
+**Veredicto agregado.** La pieza se rechaza si cualquier zona supera su
+umbral. La respuesta indica además qué zona falló, lo que convierte el
+veredicto en algo accionable: no "esta pieza está mal" sino "el logo está
+mal".
+
+**Costo.** La latencia crece de forma aproximadamente lineal con el número
+de zonas: cuatro zonas rondan 1,2s contra los ~300ms actuales. Se acepta
+el intercambio; la detección importa más que la latencia en esta demo, y
+la operación sigue siendo un solo clic para el operario.
+
+**Compatibilidad.** Una sola zona que cubra la pieza entera reproduce
+exactamente el comportamiento anterior, de modo que el esquema previo es
+un caso particular del nuevo.
+
+## Intentos descartados para el ruido de recolocación
+
+Dos hipótesis sobre por qué los defectos tipográficos no separan de las
+piezas sanas, ambas medidas sobre las capturas reales de enrolamiento y
+ambas descartadas.
+
+**Tolerancia espacial en la búsqueda del vecino.** La idea era restringir
+la comparación de cada parche a un entorno de la grilla, de modo que un
+desplazamiento de la pieza encontrara su correspondencia unas posiciones
+más allá en lugar de contar como anomalía. Medido con radios de 2 y 3
+parches contra la búsqueda global, la dispersión del enrolamiento no se
+movió: 1,26x contra 1,27x en la zona del producto, 1,61x contra 1,75x en
+la del logo. Los scores absolutos subieron, porque restringir el entorno
+sólo quita candidatos. La implementación quedó en el código detrás de
+`SEARCH_RADIUS = 0`, que es la búsqueda global.
+
+**Tamaño del top-k.** Si el score promedia los cinco peores parches, un
+defecto de un parche queda diluido entre cuatro valores de ruido; bajar k
+a 1 debería favorecerlo. La medición muestra lo contrario: en la zona del
+logo la dispersión se mantiene alrededor de 1,7x para k entre 1 y 10. El
+ruido no proviene de parches aislados sino de la región completa.
+
+Lo que ambas mediciones dicen es que la varianza no está en cómo se
+agregan las distancias ni en dónde se busca el vecino, sino en que la
+pieza se ve genuinamente distinta entre capturas: el plástico se arruga,
+la luz incide diferente y la tipografía se deforma con la superficie. Esa
+varianza es del mismo orden que un trazo de menos de un milímetro
+cuadrado, y ninguna métrica sobre los mismos embeddings la separa.

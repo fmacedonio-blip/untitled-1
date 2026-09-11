@@ -2,20 +2,59 @@
 
 ## ADDED Requirements
 
-### Requirement: Definición del área de inspección
-El sistema SHALL permitir al operario delimitar un área rectangular de
-interés sobre el video en vivo de la cámara, y SHALL aplicar ese mismo
-recorte tanto al enrolar como al inspeccionar.
+### Requirement: Definición de las zonas de inspección
+El sistema SHALL permitir al operario delimitar una o más zonas
+rectangulares sobre el video en vivo, cada una con un nombre, y SHALL
+aplicar los mismos recortes tanto al enrolar como al inspeccionar.
 
-#### Scenario: El operario delimita el área
+#### Scenario: El operario delimita una zona
 - **GIVEN** el video de la cámara está visible en pantalla
 - **WHEN** el operario arrastra un rectángulo sobre la pieza
-- **THEN** el área queda registrada y se muestra resaltada sobre el video
+- **THEN** la zona queda registrada y se muestra resaltada sobre el video
 
-#### Scenario: El área persiste entre operaciones
-- **GIVEN** existe un área de inspección definida
+#### Scenario: Varias zonas sobre la misma pieza
+- **GIVEN** existe una zona que abarca la pieza completa
+- **WHEN** el operario delimita zonas adicionales sobre regiones
+  específicas, como el logo o un bloque de texto
+- **THEN** todas las zonas conviven y se evalúan sobre la misma captura
+
+#### Scenario: Las zonas persisten entre operaciones
+- **GIVEN** existen zonas de inspección definidas
 - **WHEN** el operario enrola piezas o inspecciona una pieza nueva
-- **THEN** ambas operaciones usan exactamente el mismo recorte
+- **THEN** ambas operaciones usan exactamente los mismos recortes
+
+### Requirement: Resolución dedicada por zona
+El sistema SHALL procesar cada zona de forma independiente, escalando su
+recorte al tamaño de entrada completo del modelo, de modo que una zona
+pequeña reciba mayor resolución efectiva que la que tendría como parte de
+una zona mayor.
+
+#### Scenario: Defecto pequeño en una zona acotada
+- **GIVEN** una zona delimitada sobre una región reducida de la pieza
+- **WHEN** se inspecciona una pieza con un defecto dentro de esa región
+- **THEN** el defecto produce un score por encima del umbral de esa zona,
+  aunque no lo produjera al evaluar la pieza completa como una sola zona
+
+### Requirement: Veredicto agregado por zonas
+El sistema SHALL emitir un único veredicto por pieza a partir de una sola
+captura, rechazándola si cualquiera de sus zonas supera su propio umbral,
+y SHALL indicar qué zonas resultaron fuera de tolerancia.
+
+#### Scenario: Una zona fuera de tolerancia
+- **GIVEN** una pieza cuyo logo está alterado pero el resto es correcto
+- **WHEN** el operario la inspecciona
+- **THEN** el veredicto es RECHAZADO
+- **AND** el sistema indica que la zona del logo es la que falló
+
+#### Scenario: Todas las zonas dentro de tolerancia
+- **GIVEN** una pieza correcta recolocada
+- **WHEN** el operario la inspecciona
+- **THEN** el veredicto es APROBADO y ninguna zona se señala
+
+#### Scenario: Inspección única
+- **GIVEN** varias zonas configuradas
+- **WHEN** el operario inspecciona una pieza
+- **THEN** basta una sola captura y una sola acción para evaluarlas todas
 
 ### Requirement: Enrolamiento de la pieza de referencia
 El sistema SHALL construir un banco de memoria a partir de entre 8 y 15
@@ -82,9 +121,10 @@ sobre la pieza, señalando las regiones que más se apartan de lo normal.
 - **THEN** el mapa de calor marca la región donde está el defecto
 
 ### Requirement: Ajuste de sensibilidad
-El sistema SHALL calcular un umbral inicial a partir de las muestras de
-enrolamiento, y SHALL permitir al operario ajustarlo con un control
-deslizante viendo el efecto sobre la última pieza inspeccionada.
+El sistema SHALL calcular un umbral inicial para cada zona a partir de las
+muestras de enrolamiento, y SHALL permitir al operario ajustar la
+sensibilidad con un control deslizante viendo el efecto sobre la última
+pieza inspeccionada.
 
 #### Scenario: Umbral inicial automático
 - **GIVEN** el operario completó el enrolamiento

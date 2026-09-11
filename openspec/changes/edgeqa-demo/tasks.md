@@ -27,24 +27,40 @@ el que crece la interfaz final, no un descarte.
 Si los scores no separan, no se avanza a la interfaz definitiva. Se sube
 resolución o se activa el plan B de tiling 2x2.**
 
-- [ ] 1.10 Registrar qué defectos se detectan y con qué margen
+- [x] 1.10 Registrar qué defectos se detectan y con qué margen
+      (ver `resultados-gate.md`: 4 de 7 detectados, margen 1.6x-2.0x)
 - [ ] 1.11 Si los defectos del logo no separan: probar tiling 2x2
+      **CONFIRMADO NECESARIO**: los 3 defectos tipográficos miden
+      0.094-0.131, dentro del rango de las piezas sanas
+
+## Bloque 1b — Zonas de inspección múltiples
+
+Surgido del gate: los defectos tipográficos no separan con un ROI único.
+Ver `design.md`, "zonas de inspección múltiples". Reemplaza a 1.11.
+
+- [ ] 1b.1 Banco por zona: cada zona con sus parches y su umbral
+- [ ] 1b.2 `POST /enroll` recibe una lista de zonas con nombre
+- [ ] 1b.3 `POST /infer` evalúa todas las zonas de una captura y agrega
+      el veredicto, indicando cuáles fallaron
+- [ ] 1b.4 Editor de zonas en la interfaz: agregar, nombrar y borrar
+- [ ] 1b.5 Resultado por zona en pantalla, con su score y su umbral
+- [ ] 1b.6 Medir de nuevo las 7 defectuosas con zona de logo dedicada
 
 ## Bloque 2 — Interfaz operativa
 
 - [ ] 2.1 Tailwind y estructura visual de la pantalla
-- [ ] 2.2 Pantalla de enrolamiento con tira de miniaturas de las capturas
-- [ ] 2.3 Permitir descartar una captura individual de la tira
+- [x] 2.2 Pantalla de enrolamiento con tira de miniaturas de las capturas
+- [x] 2.3 Permitir descartar una captura individual de la tira
 - [ ] 2.4 Indicaciones en pantalla sobre cómo recolocar la pieza
 - [ ] 2.5 Veredicto a pantalla casi completa, verde o rojo
 - [ ] 2.6 Heatmap superpuesto sobre la pieza inspeccionada
-- [ ] 2.7 `GET/PUT /config` y slider de sensibilidad que reevalúa sin
+- [x] 2.7 `GET/PUT /config` y slider de sensibilidad que reevalúa sin
       volver a capturar
 - [ ] 2.8 Contadores de aprobadas y rechazadas
 
 ## Bloque 3 — Robustez y cierre
 
-- [ ] 3.1 Persistencia del banco a disco y recarga al arrancar
+- [x] 3.1 Persistencia del banco a disco y recarga al arrancar
 - [ ] 3.2 Ensayo completo: configurar, enrolar y pasar las 7 defectuosas
       más varias piezas correctas
 - [ ] 3.3 Ajustar la sensibilidad al punto que mejor funcione en vivo

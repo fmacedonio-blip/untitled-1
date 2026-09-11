@@ -1,6 +1,16 @@
 const BASE = process.env.NEXT_PUBLIC_API ?? "http://localhost:8000";
 
-export type Roi = { x: number; y: number; w: number; h: number };
+export type Rect = { x: number; y: number; w: number; h: number };
+
+/** Una zona tal como la define el operario, antes de enrolar. */
+export type ZoneSpec = Rect & { name: string };
+
+export type ZoneSummary = {
+  name: string;
+  rect: Rect;
+  base_threshold: number;
+  threshold: number;
+};
 
 export type Health = {
   ok: boolean;
@@ -8,29 +18,38 @@ export type Health = {
   grid: number;
   enrolled: boolean;
   samples: number;
-  base_threshold: number;
   sensitivity: number;
-  threshold: number;
-  roi: Roi | null;
+  model: string;
+  enrolled_with: string;
+  /** El banco se construyó con otro modelo: hay que recalcular los vectores. */
+  stale: boolean;
+  has_frames: boolean;
+  zones: ZoneSummary[];
 };
 
 export type EnrollResult = {
   samples: number;
-  patches: number;
-  base_threshold: number;
-  threshold: number;
+  zones: (ZoneSummary & { patches: number })[];
   sensitivity: number;
   elapsed_ms: number;
 };
 
+export type ZoneResult = {
+  name: string;
+  rect: Rect;
+  score: number;
+  base_threshold: number;
+  threshold: number;
+  ratio: number;
+  failed: boolean;
+  heatmap: string;
+};
+
 export type InferResult = {
   verdict: "APROBADO" | "RECHAZADO";
-  score: number;
-  threshold: number;
-  base_threshold: number;
+  failed_zones: string[];
+  zones: ZoneResult[];
   sensitivity: number;
-  ratio: number;
-  heatmap: string;
   elapsed_ms: number;
 };
 
@@ -49,23 +68,32 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: () => request<Health>("/health"),
 
-  enroll: (images: string[], roi: Roi | null) =>
+  enroll: (images: string[], zones: ZoneSpec[]) =>
     request<EnrollResult>("/enroll", {
       method: "POST",
-      body: JSON.stringify({ images, roi }),
+      body: JSON.stringify({ images, zones }),
     }),
 
-  infer: (image: string, roi: Roi | null) =>
+  infer: (image: string) =>
     request<InferResult>("/infer", {
       method: "POST",
-      body: JSON.stringify({ image, roi }),
+      body: JSON.stringify({ image }),
     }),
 
   setSensitivity: (sensitivity: number) =>
-    request<{ sensitivity: number; base_threshold: number; threshold: number }>(
-      "/config",
-      { method: "PUT", body: JSON.stringify({ sensitivity }) },
-    ),
+    request<{ sensitivity: number; zones: ZoneSummary[] }>("/config", {
+      method: "PUT",
+      body: JSON.stringify({ sensitivity }),
+    }),
+
+  reembed: () =>
+    request<{
+      from_model: string;
+      to_model: string;
+      samples: number;
+      zones: ZoneSummary[];
+      elapsed_ms: number;
+    }>("/reembed", { method: "POST" }),
 
   reset: () => request<{ enrolled: boolean }>("/reset", { method: "POST" }),
 };
