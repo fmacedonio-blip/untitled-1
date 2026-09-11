@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* Panel de planta: tema oscuro fijo, no sigue al sistema.
+   La estación tiene que verse igual en cualquier máquina. */
+:root {
+  --background: #0a0a0b;
+  --foreground: #ededed;
+  --surface: #17171a;
+  --border: #2a2a30;
+  --muted: #8a8a94;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-line: var(--border);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}

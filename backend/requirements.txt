@@ -1,0 +1,11 @@
+# Versiones con las que la estación está validada (Python 3.11, macOS/MPS).
+# Se fija el piso para evitar que una máquina distinta traiga una combinación
+# incompatible de torch/transformers el día de la demo.
+torch>=2.14.0
+torchvision>=0.29.0
+transformers>=5.17.0
+pillow>=12.3.0
+numpy>=2.4.0
+fastapi>=0.141.0
+uvicorn[standard]>=0.52.0
+python-multipart>=0.0.9

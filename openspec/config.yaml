@@ -1,20 +1,46 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  # EdgeQA — Control de calidad visual few-shot
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  ## Qué es
+  Estación de inspección visual que aprende "qué es normal" con 8-15 fotos
+  de piezas correctas, sin etiquetar defectos ni entrenar modelos.
+  Detecta anomalías por distancia en espacio de embeddings.
+
+  ## Contexto de desarrollo
+  Proyecto de hackathon interno. Horizonte: UN día. Dos personas.
+  No hay cliente ni usuarios reales. El entregable es una demo en vivo
+  que funcione de punta a punta, no un producto.
+  Ante cualquier duda de scope: elegir lo que se ve en la demo.
+
+  ## Caso de prueba concreto
+  Saquitos de té La Virginia sabor durazno, sobre fondo blanco,
+  webcam cenital fija, iluminación controlada.
+  7 piezas defectuosas preparadas a mano (ver design.md para el catálogo).
+
+  ## Stack
+  - Frontend: Next.js (App Router) + Tailwind CSS + TypeScript
+  - Backend: Python 3.11 + FastAPI + PyTorch
+  - Modelo: DINOv2-S/14 (facebook/dinov2-small) vía transformers
+  - Ejecución: 100% local. Sin nube, sin base de datos, sin auth.
+  - Captura: getUserMedia en el browser (NO OpenCV en Python — evita
+    problemas de permisos de cámara en macOS)
+
+  ## Convenciones
+  - Estado en memoria del proceso Python + persistencia a disco vía pickle
+  - Comunicación Next -> FastAPI por HTTP, imágenes en base64
+  - Sin tests automatizados: la validación es el script offline del Bloque 1
+  - Español en UI y documentación; inglés en identificadores de código
+
+rules:
+  proposal:
+    - Incluir siempre una sección "Fuera de alcance" explícita
+    - Mantener bajo 400 palabras
+  tasks:
+    - Chunks de máximo 1 hora
+    - Ordenar por riesgo: lo que puede fracasar va primero
+    - Marcar explícitamente los gates de decisión
+  design:
+    - Documentar el porqué de cada decisión, no solo el qué
+    - Incluir los planes B para las decisiones riesgosas
